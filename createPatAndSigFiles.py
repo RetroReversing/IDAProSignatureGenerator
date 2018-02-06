@@ -11,6 +11,11 @@ def log_action(message):
 def execute_command(bashCommand):
     return subprocess.check_output(bashCommand.split(),stderr= subprocess.STDOUT)
 
+def create_zip_file(libraryName):
+    execute_command("mkdir -p ./generated/zips/")
+    execute_command("zip -r ./generated/zips/"+libraryName+".zip ./generated/"+libraryName)
+
+
 libraries = {}
 for root, dirnames, filenames in os.walk('libs'):
     matches = []
@@ -19,7 +24,7 @@ for root, dirnames, filenames in os.walk('libs'):
     if (len(path_parts) > 1):
         library_name = path_parts[1]
     if not library_name in libraries:
-        libraries[library_name] = {'patfiles':[]}    
+        libraries[library_name] = {'patfiles':[], 'total':0}    
     log_action('Library: '+ library_name)
     for filename in fnmatch.filter(filenames, '*.[aA]'):
         log_action("Filename:"+ filename)
@@ -34,9 +39,14 @@ for root, dirnames, filenames in os.walk('libs'):
         output = subprocess.check_output(bashCommands,stderr= subprocess.STDOUT)
 
         libraries[library_name]["patfiles"].append(output_path)
-        outputParts = output.split(' ')
+        outputAfterColon = output.split(':')[1]
+        outputParts = outputAfterColon.split(' ')
         skipped = outputParts[2]
         total = outputParts[4]
+        try:
+            libraries[library_name]["total"]+=int(total)
+        except:
+            print "Exception with:"+total+" "+output
         log_action("A file: skipped:"+skipped+" total:"+total)
         matches.append(full_path+'.pat')
 
@@ -54,7 +64,7 @@ def moveOutputToGeneratedDirectory(libraryName, outputSigName, patternFiles):
     execute_command("cp "+ patternFiles + " "+outputDirectory+"/patternfiles/")
 
 def parseExclusionsFile(outputExcludedFile):
-    print "\nParsing Exclusions File:", outputExcludedFile
+    log_action("Parsing Exclusions File:"+outputExcludedFile)
     with open(outputExcludedFile) as f:
         file_contents = f.read()
         collision_content = file_contents.split('\n\n')
@@ -65,8 +75,9 @@ def parseExclusionsFile(outputExcludedFile):
         new_exc_contents=""
 
         for collision in collision_content[1:]:
+            first_collision_line = collision.split("\n")[0]
             if "\n" in collision:
-                new_exc_contents+= "+collision_"+collision+"\n\n"
+                new_exc_contents+= "+collision_"+first_collision_line+"\n"+collision+"\n\n"
             else:
                 # One line collision
                 new_exc_contents+= ""+collision+"\n\n"
@@ -94,8 +105,11 @@ for libraryName in libraries:
     if len(library['patfiles']) <1:
         # There is no pattern files generated for this library so skip it
         continue
-    print "---\n # Generating signature for Library: "+libraryName
+    print "---\n # Generating signature for Library: "+libraryName+" total:"+str(library["total"])
     outputSigName = libraryName+'.sig'
+    outputExcludedFile = libraryName+".exc"
+    execute_command("rm ./"+outputExcludedFile)
+
 
     # 
     # Run sigmake to generate the .sig file
@@ -103,7 +117,7 @@ for libraryName in libraries:
     allPatternFilesAdded = '+'.join(library['patfiles'])
     run_sigmake(libraryName,allPatternFilesAdded,outputSigName)
 
-    outputExcludedFile = libraryName+".exc"
+    
     parseExclusionsFile(outputExcludedFile)
 
     # 
@@ -113,6 +127,7 @@ for libraryName in libraries:
 
     if os.path.isfile(outputSigName): 
         moveOutputToGeneratedDirectory(libraryName, outputSigName, ' '.join(library['patfiles']))
+        create_zip_file(libraryName)
         print "Successfully Generated",outputSigName,"\n"
     elif os.path.isfile(outputExcludedFile):
         print "ERROR: Please manually edit ",outputExcludedFile
