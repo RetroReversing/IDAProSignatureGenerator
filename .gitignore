@@ -1,0 +1,7 @@
+generated/
+libs/
+*.err
+*.pat
+*.exc
+sigmake
+pelf
