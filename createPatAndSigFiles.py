@@ -2,6 +2,12 @@ import fnmatch
 import os
 import subprocess
 
+verbose = False
+
+def log_action(message):
+    if verbose:
+        print message
+
 def execute_command(bashCommand):
     return subprocess.check_output(bashCommand.split(),stderr= subprocess.STDOUT)
 
@@ -14,9 +20,9 @@ for root, dirnames, filenames in os.walk('libs'):
         library_name = path_parts[1]
     if not library_name in libraries:
         libraries[library_name] = {'patfiles':[]}    
-    print 'Library:', library_name
+    log_action('Library: '+ library_name)
     for filename in fnmatch.filter(filenames, '*.[aA]'):
-        print "Filename:", filename
+        log_action("Filename:"+ filename)
         full_path = (os.path.join(root, filename))
         output_path = full_path.replace(' ','_').replace('+','')+'.pat'
 
@@ -31,7 +37,7 @@ for root, dirnames, filenames in os.walk('libs'):
         outputParts = output.split(' ')
         skipped = outputParts[2]
         total = outputParts[4]
-        print "A file: ",outputParts, skipped, total
+        log_action("A file: skipped:"+skipped+" total:"+total)
         matches.append(full_path+'.pat')
 
 
@@ -44,7 +50,7 @@ def moveOutputToGeneratedDirectory(libraryName, outputSigName, patternFiles):
     # make sure to only copy the exc file as otherwise changes will be overwritten
     # 
     execute_command("cp "+ outputExcludedFile + " "+outputDirectory)
-    print "Pattern files:"+patternFiles
+    log_action("Pattern files:"+patternFiles)
     execute_command("cp "+ patternFiles + " "+outputDirectory+"/patternfiles/")
 
 def parseExclusionsFile(outputExcludedFile):
@@ -54,7 +60,7 @@ def parseExclusionsFile(outputExcludedFile):
         collision_content = file_contents.split('\n\n')
         all_lines = file_contents.split('\n')
         if all_lines[0] != ';--------- (delete these lines to allow sigmake to read this file)':
-            print "Already sorted ",outputExcludedFile
+            log_action("Already sorted "+outputExcludedFile)
             return
         new_exc_contents=""
 
@@ -72,7 +78,7 @@ def parseExclusionsFile(outputExcludedFile):
 
 def run_sigmake(libraryName,allPatternFilesAdded,outputSigName):
     bashCommand = './sigmake -n'+libraryName+' '+allPatternFilesAdded+' '+outputSigName
-    print bashCommand
+    log_action(bashCommand)
     output=""
     try:
         output = subprocess.check_output(bashCommand.split(),stderr= subprocess.STDOUT)
@@ -88,7 +94,7 @@ for libraryName in libraries:
     if len(library['patfiles']) <1:
         # There is no pattern files generated for this library so skip it
         continue
-    print "Generating signature for Library:",libraryName
+    print "---\n # Generating signature for Library: "+libraryName
     outputSigName = libraryName+'.sig'
 
     # 
@@ -109,4 +115,4 @@ for libraryName in libraries:
         moveOutputToGeneratedDirectory(libraryName, outputSigName, ' '.join(library['patfiles']))
         print "Successfully Generated",outputSigName,"\n"
     elif os.path.isfile(outputExcludedFile):
-        print "Please edit ",outputExcludedFile
+        print "ERROR: Please manually edit ",outputExcludedFile
