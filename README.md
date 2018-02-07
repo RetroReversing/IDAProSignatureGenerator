@@ -1,4 +1,4 @@
-# Convert Whole libraries to .sig nd .pat files
+# Convert Whole libraries to .sig and .pat files
 Just copy your library that you want to make into a IDA-pro FLAIR signature into the libs directory, with a folder name that describes the library and run this script!
 
 This script may need to be run more than once for a single library with modifications made to the libraries included as there are a couple of issues with pelf and sigmake, especially with relocatable binaries.
@@ -7,6 +7,15 @@ This script may need to be run more than once for a single library with modifica
 ```
 python createPatAndSigFiles.py
 ```
+
+## Tools Required
+
+Name | Description
+--- | ---
+pelf | Creates pattern files (.pat) from elf libraries (part of IDA Pro FLAIR tools)
+sigmake | Create a signature file (.sig) from pattern files (part of IDA Pro FLAIR tools)
+
+# Features
 
 ## Automatic Collision Solving
 In order to save time the script automatically fixes the .exc files by:
@@ -26,9 +35,10 @@ Very common with the Renderware libraries.
 Not sure how to fix this issue, and what is a relocation type?
 Even IDA Pro when opening the file says it contains "non standard use of relocations"
 
-# Tools Required
-
-Name | Description
---- | ---
-pelf | Creates pattern files (.pat) from elf libraries (part of IDA Pro FLAIR tools)
-sigmake | Create a signature file (.sig) from pattern files (part of IDA Pro FLAIR tools)
+# Future Projects
+* Convert un-stripped ELF files into patterns/signatures
+* Create a JSON file of symbols plus the source library file
+    - Useful for seeing what libraries games were compiled with
+    - Useful for comparing different versions of libraries
+    - Requires parsing the .pat files
+* Create radare2 Zignatures
