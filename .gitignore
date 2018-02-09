@@ -3,5 +3,6 @@ libs/
 *.err
 *.pat
 *.exc
+*.pyc
 sigmake
 pelf
